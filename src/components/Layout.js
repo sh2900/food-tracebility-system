@@ -1,21 +1,29 @@
 import Sidebar from "./Sidebar";
+import Navbar from "./Navbar";
+import { useTheme } from "../context/ThemeContext";
 
 function Layout({ children }) {
+  const { theme } = useTheme();
+
   return (
-    <div style={{ display: "flex", background: "#0f172a" }}>
-      
+    <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar />
-
       <div style={{
-        marginLeft: "220px",
-        padding: "30px",
-        width: "100%",
-        minHeight: "100vh",
-        color: "white"
+        marginLeft: "240px",
+        flex: 1,
+        display: "flex",
+        flexDirection: "column"
       }}>
-        {children}
+        <Navbar />
+        <main style={{
+          padding: "2rem",
+          maxWidth: "1200px",
+          width: "100%",
+          margin: "0 auto"
+        }} className="fade-in">
+          {children}
+        </main>
       </div>
-
     </div>
   );
 }

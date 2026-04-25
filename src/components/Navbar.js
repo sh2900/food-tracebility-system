@@ -1,18 +1,61 @@
-import { Link } from "react-router-dom";
+import React from 'react';
+import { useTheme } from '../context/ThemeContext';
+import { useState } from 'react';
 
 function Navbar() {
+  const { theme, toggleTheme } = useTheme();
+  const [user] = useState(JSON.parse(localStorage.getItem("user") || "{}"));
+
   return (
-    <div style={{
-      display: "flex",
-      justifyContent: "space-around",
-      padding: "15px",
-      background: "#222",
-      color: "white"
+    <nav style={{
+      height: '64px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 2rem',
+      backgroundColor: 'var(--bg-surface)',
+      borderBottom: '1px solid var(--border)',
+      position: 'sticky',
+      top: 0,
+      zIndex: 50
     }}>
-      <Link to="/dashboard" style={{ color: "white" }}>Dashboard</Link>
-      <Link to="/blockchain" style={{ color: "white" }}>Blockchain</Link>
-      <Link to="/analytics" style={{ color: "white" }}>Analytics</Link>
-    </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>
+          {window.location.pathname.replace('/', '').charAt(0).toUpperCase() + window.location.pathname.slice(2) || 'Dashboard'}
+        </h2>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <button 
+          onClick={toggleTheme} 
+          className="btn btn-secondary"
+          style={{ padding: '0.5rem', borderRadius: '50%', width: '40px', height: '40px' }}
+        >
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{user.username}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user.role}</div>
+          </div>
+          <div style={{ 
+            width: '36px', 
+            height: '36px', 
+            borderRadius: '50%', 
+            backgroundColor: 'var(--primary)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            color: 'white',
+            fontWeight: 'bold',
+            fontSize: '0.875rem'
+          }}>
+            {user.username?.charAt(0).toUpperCase()}
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }
 

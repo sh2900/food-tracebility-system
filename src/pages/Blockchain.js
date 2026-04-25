@@ -1,131 +1,133 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 import Layout from "../components/Layout";
 
 function Blockchain() {
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchRecords = () => {
-    console.log("📄 [FRONTEND] Attempting to synchronize blockchain ledger records...");
-    setLoading(true);
-    fetch("http://localhost:5000/real-blockchain")
-      .then(res => {
-        console.log("📥 [FRONTEND] Ledger API sync status:", res.status);
-        if (!res.ok) {
-            console.error("❌ [FRONTEND] Synchronize failed with status:", res.status);
-            throw new Error("Could not connect to backend.");
-        }
-        return res.json();
-      })
-      .then(data => {
-        console.log("📊 [FRONTEND] Ledger records restored! Total Count:", data.length);
-        console.log("📋 [FRONTEND] Snapshot of latest record:", data[0]);
-        setRecords(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("❌ [FRONTEND] Blockchain history sync failed:", err.message);
-        setError(err.message);
-        setLoading(false);
-      });
-  };
+  const [productId, setProductId] = useState("");
+  const [logs, setLogs] = useState([]);
+  const [allLogs, setAllLogs] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    console.log("🚀 [FRONTEND] Blockchain Explorer component mounted.");
-    fetchRecords();
-    const interval = setInterval(() => {
-        console.log("⏱️ [FRONTEND] Triggering auto-sync for blockchain audit trail.");
-        fetchRecords();
-    }, 12000); 
-    return () => {
-        console.log("🧹 [FRONTEND] Blockchain Explorer unmounting. Stopping sync interval.");
-        clearInterval(interval);
-    };
+    fetchAllLogs();
   }, []);
+
+  const fetchAllLogs = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("http://localhost:5000/api/blockchain/logs/all", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAllLogs(res.data.reverse()); // Show latest first
+    } catch (err) {
+      console.error("Error fetching global logs", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProductLogs = async () => {
+    if (!productId) return fetchAllLogs();
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`http://localhost:5000/api/blockchain/logs/${productId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLogs(res.data.reverse());
+    } catch (err) {
+      alert("Error fetching blockchain logs");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const currentLogs = productId ? logs : allLogs;
 
   return (
     <Layout>
-      <div style={{ padding: "10px" }}>
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center",
-          marginBottom: "20px"
-        }}>
-          <div>
-            <h1 style={{ margin: 0 }}>⛓ Blockchain Explorer</h1>
-            <p style={{ color: "#94a3b8", marginTop: "5px" }}>Live immutable audit trail of Ethereum-secured IoT data.</p>
-          </div>
-          <button onClick={() => {
-              console.log("🔄 [FRONTEND] User manual refresh triggered.");
-              fetchRecords();
-            }} 
-            disabled={loading} className="premium-button">
-            {loading ? "Syncing..." : "🔄 Refresh Chain"}
+      <div className="fade-in">
+        <h1 style={{ marginBottom: "0.5rem" }}>⛓ Blockchain Ledger Explorer</h1>
+        <p style={{ color: "var(--text-secondary)", marginBottom: "2rem" }}>Real-time verification of supply chain events on the Ethereum network.</p>
+
+        <div className="card" style={{ display: "flex", gap: "1rem", marginBottom: "2rem" }}>
+          <input 
+            className="input-field"
+            placeholder="Search by Product ID (leave empty for all transactions)" 
+            value={productId} 
+            onChange={e => setProductId(e.target.value)} 
+            style={{ flex: 1 }}
+          />
+          <button onClick={fetchProductLogs} className="btn btn-primary" disabled={loading}>
+            {productId ? 'Verify ID' : 'Refresh Ledger'}
           </button>
         </div>
 
-        {error && (
-          <div style={{ 
-            background: "#450a0a", color: "#f87171", padding: "15px", borderRadius: "10px",
-            marginBottom: "20px", border: "1px solid #7f1d1d" 
-          }}>
-            ⚠️ [FRONTEND] {error}
-          </div>
-        )}
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead style={{ background: 'var(--bg-app)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                    <tr>
+                        <th style={{ padding: '1rem 1.5rem' }}>Verification</th>
+                        <th style={{ padding: '1rem 1.5rem' }}>Product ID</th>
+                        <th style={{ padding: '1rem 1.5rem' }}>Data Hash</th>
+                        <th style={{ padding: '1rem 1.5rem' }}>Timestamp</th>
+                        <th style={{ padding: '1rem 1.5rem' }}>Actor</th>
+                    </tr>
+                </thead>
+                <tbody style={{ fontSize: '0.875rem' }}>
+                    {loading ? (
+                        <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Synchronizing with blockchain...</td></tr>
+                    ) : currentLogs.length === 0 ? (
+                        <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No immutable records found.</td></tr>
+                    ) : (
+                        currentLogs.map((log, idx) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                <td style={{ padding: '1rem 1.5rem' }}>
+                                    <span className="verified-badge">
+                                        ✓ VERIFIED
+                                    </span>
+                                </td>
+                                <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--secondary)' }}>{log.productId}</td>
+                                <td style={{ padding: '1rem 1.5rem' }}>
+                                    <code style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'var(--bg-app)', padding: '2px 6px', borderRadius: '4px' }}>
+                                        {log.dataHash.substring(0, 16)}...
+                                    </code>
+                                </td>
+                                <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)' }}>{new Date(log.timestamp * 1000).toLocaleString()}</td>
+                                <td style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{log.actor}</td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
 
-        <div style={{ display: "grid", gap: "15px" }}>
-          {records.length === 0 && !loading && (
-            <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
-               No transactions found on the blockchain yet. 
+        <div style={{ marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            <div className="card">
+                <h4 style={{ marginBottom: '1rem' }}>Network Status</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Protocol</span>
+                    <span style={{ color: 'var(--safe)', fontWeight: 600 }}>Ethereum (Ganache)</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Consensus</span>
+                    <span style={{ color: 'var(--secondary)', fontWeight: 600 }}>Proof of Authority</span>
+                </div>
             </div>
-          )}
-
-          {records.map((r, i) => {
-            console.log(`📑 [FRONTEND] Rendering record ${i} on stack.`);
-            return (
-              <div key={i} className="glass" style={{
-                padding: "20px",
-                borderRadius: "15px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                animation: "fadeIn 0.5s ease-out forwards",
-                borderLeft: `5px solid ${r.status?.includes("Safe") ? "#22c55e" : "#ef4444"}`
-              }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>🌡 {r.temperature}°C</span>
-                    <span style={{ 
-                      fontSize: "0.75rem", padding: "3px 8px", borderRadius: "5px",
-                      background: r.status?.includes("Safe") ? "#064e3b" : "#7f1d1d",
-                      color: "white"
-                    }}>
-                      {r.status?.toUpperCase()}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: "8px", fontSize: "0.9rem", color: "#94a3b8" }}>
-                    📍 {r.location} | <small>Validated at {r.timestamp}</small>
-                  </div>
+            <div className="card">
+                <h4 style={{ marginBottom: '1rem' }}>Contract Information</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Address</span>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', fontFamily: 'monospace' }}>{process.env.REACT_APP_CONTRACT_ADDR || '0x4ee5b71e92eC3BF4EFC8c0b26BAE58cC270f305C'}</span>
                 </div>
-                
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase" }}>Block Status</div>
-                  <div style={{ color: "#22c55e", fontWeight: "bold" }}>✅ VERIFIED</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Compiler</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>solc 0.8.0</span>
                 </div>
-              </div>
-            );
-          })}
+            </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </Layout>
   );
 }
